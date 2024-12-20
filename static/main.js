@@ -66,12 +66,14 @@ function resetPlanner() {
     planButton.disabled = true;
     clearCanvas();
     statusText.textContent = 'Right click and drag to draw obstacles. Left click to set start point (green), then goal point (red)';
+    updateStats(null);
 }
 
 async function planPath() {
     try {
         statusText.textContent = 'Planning path...';
         planButton.disabled = true;
+        updateStats(null);  // Reset stats while planning
 
         const response = await fetch('/plan', {
             method: 'POST',
@@ -104,12 +106,43 @@ async function planPath() {
         drawPoint(start, START_COLOR);
         drawPoint(goal, GOAL_COLOR);
         
+        updateStats(data.stats);
         planButton.disabled = false;
     } catch (error) {
         console.error('Error:', error);
         statusText.textContent = 'Error occurred while planning path.';
+        updateStats(null);
         planButton.disabled = false;
     }
+}
+
+function updateStats(stats) {
+    if (!stats) {
+        document.getElementById('planStatus').textContent = 'Waiting to plan...';
+        document.getElementById('planTime').textContent = '-';
+        document.getElementById('iterations').textContent = '-';
+        document.getElementById('pathLength').textContent = '-';
+        document.getElementById('verticesExplored').textContent = '-';
+        document.getElementById('pathNodes').textContent = '-';
+        return;
+    }
+    
+    // Update status
+    const statusElem = document.getElementById('planStatus');
+    if (stats.success) {
+        statusElem.textContent = 'Path Found!';
+        statusElem.className = 'stat-value success';
+    } else {
+        statusElem.textContent = 'No Path Found';
+        statusElem.className = 'stat-value failure';
+    }
+    
+    // Update other statistics
+    document.getElementById('planTime').textContent = `${stats.planning_time.toFixed(3)} seconds`;
+    document.getElementById('iterations').textContent = stats.iterations.toLocaleString();
+    document.getElementById('pathLength').textContent = stats.path_length.toFixed(3);
+    document.getElementById('verticesExplored').textContent = stats.vertices_explored.toLocaleString();
+    document.getElementById('pathNodes').textContent = stats.path_nodes.toLocaleString();
 }
 
 canvas.addEventListener('click', (event) => {
